@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SpriteCat anim preview</title>
+  <style>
+    html,body{margin:0;background:#0b0803;color:#efe6d6;font-family:system-ui,sans-serif;height:100%;overflow:hidden}
+    #wrap{display:flex;flex-direction:column;align-items:center;height:100%}
+    #gl{width:390px;height:690px;background:#120c08;border:1px solid #d79b29;position:relative}
+    #label{position:absolute;left:50%;top:18px;transform:translateX(-50%);background:rgba(0,0,0,.65);
+      border:1px solid #ffcd5c;border-radius:10px;padding:8px 14px;font-weight:700;letter-spacing:.08em;color:#ffcd5c;z-index:2}
+    #bar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:10px;max-width:420px}
+    button{background:#2a1c10;color:#ffcd5c;border:1px solid #d79b29;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:12px}
+    button.on{background:linear-gradient(180deg,#ffd36a,#d79b29);color:#2a1a05;font-weight:700}
+  </style>
+  <script type="module" crossorigin src="./assets/anim-D9H8O3ON.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/spritecat-DST7Pn2X.js">
+</head>
+<body>
+  <div id="wrap">
+    <div id="gl"><div id="label">IDLE</div></div>
+    <div id="bar">
+      <button data-s="idle" class="on">idle</button>
+      <button data-s="run">run</button>
+      <button data-s="dig_down">dig↓</button>
+      <button data-s="dig_up">dig↑</button>
+      <button data-s="smash">smash</button>
+      <button data-s="jump">jump</button>
+      <button data-s="duck">duck</button>
+      <button data-s="hurt">hurt</button>
+      <button data-s="fall_land">land</button>
+      <button data-s="climb">climb</button>
+      <button data-s="dash">dash</button>
+      <button id="cycle">cycle all</button>
+      <button id="flip">flip L/R</button>
+    </div>
+  </div>
+</body>
+</html>

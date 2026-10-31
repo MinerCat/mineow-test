@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0803" />
+  <meta name="description" content="Mỏ Sống Theo Chuỗi — đào theo nhịp mạng Solana công khai. Miễn phí, không ví." />
+  <title>MINEOW · Mỏ Sống Theo Chuỗi</title>
+  <link rel="icon" href="art/badge_cat.webp" />
+  <script type="module" crossorigin src="./assets/main-KLKfRsvj.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/spritecat-DST7Pn2X.js">
+  <link rel="stylesheet" crossorigin href="./assets/main-VSXflZJH.css">
+</head>
+<body>
+  <div id="app">
+    <div id="stage">
+      <div id="gl"></div>
+
+      <div id="hud" class="hidden" aria-live="polite">
+        <div class="hud-top">
+          <div class="hearts" id="hearts"></div>
+          <div class="pulse-wrap">
+            <div class="pulse-label"><span id="pulseMode">Nhịp mạng · OFFLINE</span></div>
+            <div class="pulse-bar"><i id="pulseFill"></i></div>
+          </div>
+          <div class="stats">
+            <div><small>ĐỘ SÂU</small><b id="depthN">0m</b></div>
+            <div><small>SPARKS</small><b id="sparkN">0</b></div>
+          </div>
+          <button id="pauseBtn" class="icon-btn" aria-label="Tạm dừng">❚❚</button>
+        </div>
+        <div class="lane-hints"><span>‹</span><span>›</span></div>
+        <div id="toast" class="toast"></div>
+        <div class="dig-zone" id="digHint"><b>GIỮ ĐỂ ĐÀO</b><small>Vuốt trái/phải đổi làn · lên nhảy · xuống cúi</small></div>
+      </div>
+
+      <div id="title" class="screen">
+        <div class="badge-tl"><img src="art/badge_cat.webp" alt="" /><span>MINER CAT</span></div>
+        <div class="pulse-pill" id="titlePulse"><i></i><b>Nhịp mạng · YÊN</b></div>
+        <div class="title-hero"><img id="titleCat" src="art/cat_hero.webp" alt="Miner Cat" /></div>
+        <div class="title-copy">
+          <h1>MỎ SỐNG THEO CHUỖI</h1>
+          <h2>Living Chain Mine</h2>
+          <p class="sub">Hang phản ứng theo nhịp mạng Solana công khai · chỉ đọc · phần thưởng trang trí</p>
+        </div>
+        <div class="title-btns">
+          <button id="btnStart" class="goldbtn">BẮT ĐẦU</button>
+          <div class="row">
+            <button id="btnHelp" class="stonebtn">Hướng dẫn</button>
+            <button id="btnBadges" class="stonebtn">Huy hiệu</button>
+          </div>
+          <p class="meta">Miễn phí · Không ví · Không token</p>
+        </div>
+      </div>
+
+      <div id="help" class="panel hidden"><div class="box">
+        <h2>Hướng dẫn</h2>
+        <ul>
+          <li><b>Giữ</b> vùng dưới (hoặc Space) để <b>đào</b> xuống.</li>
+          <li><b>Vuốt trái / phải</b> (← →) đổi 3 làn.</li>
+          <li><b>Vuốt lên</b> (↑) nhảy · <b>vuốt xuống</b> (S) cúi tránh đá trần.</li>
+          <li><b>Nhịp mạng</b> YÊN / ỔN / ĐÔNG đổi hang theo TPS công khai (hoặc OFFLINE).</li>
+          <li>Nhặt <b>Chain Sparks</b> và nấm phát sáng. 3 tim mỗi lượt.</li>
+        </ul>
+        <p class="note">Dữ liệu mạng chỉ đọc công khai. Không kết nối ví. Chỉ huy hiệu trang trí.</p>
+        <button data-close class="goldbtn">Đóng</button>
+      </div></div>
+
+      <div id="badges" class="panel hidden"><div class="box">
+        <h2>Huy hiệu trang trí</h2>
+        <p class="sub" id="badgeSub">Mở bằng cách đào sâu và sống sót.</p>
+        <div class="badge-grid" id="badgeGrid"></div>
+        <button data-close class="goldbtn">Đóng</button>
+      </div></div>
+
+      <div id="pause" class="panel hidden"><div class="box">
+        <h2>Tạm dừng</h2>
+        <label class="row"><span>Âm lượng</span><input type="range" id="sVol" min="0" max="100" value="70" /></label>
+        <label class="row"><span>Reduced Motion</span><input type="checkbox" id="sRM" /></label>
+        <label class="row"><span>Easy Mode</span><input type="checkbox" id="sEasy" /></label>
+        <p class="note">Dữ liệu mạng: chỉ đọc công khai · không ví</p>
+        <button data-a="resume" class="goldbtn">Tiếp tục</button>
+        <button data-a="restart" class="stonebtn">Chơi lại tầng</button>
+        <button data-a="title" class="stonebtn">Về tiêu đề</button>
+      </div></div>
+
+      <div id="result" class="panel hidden"><div class="box wide">
+        <small id="rPre">TẦNG 1 · MOUTH OF ECHOES</small>
+        <h2 id="rTitle">THÀNH CÔNG</h2>
+        <p class="rank" id="rRank">Slot Pup</p>
+        <div class="result-cat"><img src="art/cat_idle.webp" alt="" /></div>
+        <p class="badge-got" id="rBadge">Huy hiệu trang trí</p>
+        <div class="stats-row">
+          <div><span>Độ sâu</span><b id="rDepth">0m</b></div>
+          <div><span>Sparks</span><b id="rSparks">0</b></div>
+          <div><span>Điểm</span><b id="rScore">0</b></div>
+        </div>
+        <div class="pulse-mini" id="rPulse">Nhịp mạng · YÊN</div>
+        <button data-a="replay" class="goldbtn">Chơi lại</button>
+        <button data-a="title" class="stonebtn">Về Depths</button>
+      </div></div>
+
+      <div id="loading"><div class="logo"><small>MINEOW</small><b>DEPTH 5</b></div><div class="bar"><i></i></div><p>Mỏ đang thở…</p></div>
+      <div id="rotate"><div><p>Xoay máy sang dọc</p></div></div>
+    </div>
+  </div>
+</body>
+</html>

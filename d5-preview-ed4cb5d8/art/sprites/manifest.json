@@ -1,0 +1,29 @@
+{
+  "canvas": [
+    512,
+    640
+  ],
+  "baseline": 600,
+  "fps": {
+    "idle": 5,
+    "run": 9,
+    "jump": 10,
+    "fall_land": 9,
+    "smash": 10,
+    "climb": 9,
+    "dash": 14,
+    "dig_down": 8,
+    "dig_up": 8,
+    "duck": 6,
+    "hurt": 8
+  },
+  "anims": [
+    "idle",
+    "run",
+    "jump",
+    "smash",
+    "climb",
+    "dash",
+    "fall_land"
+  ]
+}
