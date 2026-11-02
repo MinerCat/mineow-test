@@ -7,9 +7,9 @@
   <meta name="description" content="Mỏ Sống Theo Chuỗi — đào theo nhịp mạng Solana công khai. Miễn phí, không ví." />
   <title>MINEOW · Mỏ Sống Theo Chuỗi</title>
   <link rel="icon" href="art/badge_cat.webp" />
-  <script type="module" crossorigin src="./assets/main-wt0UYpfz.js"></script>
-  <link rel="modulepreload" crossorigin href="./assets/spritecat-BJkDUvmK.js">
-  <link rel="stylesheet" crossorigin href="./assets/main-VSXflZJH.css">
+  <script type="module" crossorigin src="./assets/main-BymfSPc0.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/spritecat-CnEIwVvL.js">
+  <link rel="stylesheet" crossorigin href="./assets/main-CAEsGqLp.css">
 </head>
 <body>
   <div id="app">
@@ -31,7 +31,12 @@
         </div>
         <div class="lane-hints"><span>‹</span><span>›</span></div>
         <div id="toast" class="toast"></div>
-        <div class="dig-zone" id="digHint"><b>GIỮ ĐỂ ĐÀO</b><small>Vuốt trái/phải đổi làn · lên nhảy · xuống cúi</small></div>
+        <div class="dig-zone" id="digHint"><b>GIỮ ĐỂ ĐÀO</b><small>Vuốt hoặc nhấn ◀ ▶ · giữ ⛏ / Space</small></div>
+        <div id="pad" class="pad hidden" aria-label="Điều khiển">
+          <button type="button" class="pad-btn stone" data-act="left" aria-label="Trái">◀</button>
+          <button type="button" class="pad-btn dig" data-act="dig" aria-label="Đào">⛏</button>
+          <button type="button" class="pad-btn stone" data-act="right" aria-label="Phải">▶</button>
+        </div>
       </div>
 
       <div id="title" class="screen">
@@ -56,8 +61,8 @@
       <div id="help" class="panel hidden"><div class="box">
         <h2>Hướng dẫn</h2>
         <ul>
-          <li><b>Giữ</b> vùng dưới (hoặc Space) để <b>đào</b> xuống.</li>
-          <li><b>Vuốt trái / phải</b> (← →) đổi 3 làn.</li>
+          <li><b>Giữ</b> nút ⛏ / vùng dưới (hoặc Space) để <b>đào</b> xuống.</li>
+          <li><b>Vuốt</b> hoặc nhấn ◀ ▶ (← →) đổi 3 làn.</li>
           <li><b>Vuốt lên</b> (↑) nhảy · <b>vuốt xuống</b> (S) cúi tránh đá trần.</li>
           <li><b>Nhịp mạng</b> YÊN / ỔN / ĐÔNG đổi hang theo TPS công khai (hoặc OFFLINE).</li>
           <li>Nhặt <b>Chain Sparks</b> và nấm phát sáng. 3 tim mỗi lượt.</li>
