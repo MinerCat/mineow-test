@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#1a1008" />
+  <title>Hầm Mỏ Bình Yên · MINEOW</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" type="image/png" href="art/logo_coin.png" />
+</head>
+<body>
+  <div id="app">
+    <button type="button" id="btn-mute" class="mute-btn" aria-label="Tắt tiếng" title="Âm thanh">🔊</button>
+    <!-- ENTRY -->
+    <section id="screen-entry" class="screen active" data-bg="art/bg_entry.jpg">
+      <div class="entry-top">
+        <img class="logo-coin" src="art/logo_coin.png" alt="MINEOW" width="112" height="112" />
+        <h1 class="title">Hầm Mỏ Bình Yên</h1>
+        <p class="subtitle">không gian thư giãn chung</p>
+      </div>
+      <div class="entry-bottom">
+        <div class="name-card">
+          <div class="name-label">Tên thợ mỏ của bạn</div>
+          <div id="player-name" class="name-value">…</div>
+          <div id="seat-pill" class="seat-pill">Còn — chỗ ngồi</div>
+        </div>
+        <button type="button" id="btn-enter" class="btn btn-primary">Vào hầm</button>
+        <button type="button" id="btn-reroll" class="btn btn-ghost">Đổi tên</button>
+      </div>
+    </section>
+
+    <!-- ZONE MAP -->
+    <section id="screen-map" class="screen" data-bg="art/bg_zones.jpg">
+      <header class="map-header">
+        <img class="logo-coin sm" src="art/logo_coin.png" alt="" width="40" height="40" />
+        <div class="map-titles">
+          <h2>Chọn khu vực</h2>
+          <p>Hầm Mỏ Bình Yên</p>
+        </div>
+      </header>
+      <div class="zone-list" id="zone-list"></div>
+      <footer class="map-footer">
+        <div class="counter counter-gold" id="counter-den">0 đèn đã thắp</div>
+        <div class="counter counter-violet" id="counter-chuong">0 tiếng chuông</div>
+        <p class="local-note">Bộ đếm lưu trên máy bạn · chưa đồng bộ cộng đồng</p>
+      </footer>
+    </section>
+
+    <!-- ZONE SCENE -->
+    <section id="screen-zone" class="screen">
+      <header class="zone-header">
+        <img class="logo-coin sm" src="art/logo_coin.png" alt="" width="36" height="36" />
+        <div class="zone-titles">
+          <h2 id="zone-title">—</h2>
+          <p id="zone-sub">Hầm Mỏ Bình Yên</p>
+          <p id="zone-flavor" class="flavor"></p>
+        </div>
+      </header>
+      <canvas id="scene" width="720" height="900" aria-label="Khu vực hầm mỏ"></canvas>
+      <div id="toast" class="toast" hidden></div>
+      <div id="collection" class="collection" hidden>
+        <div class="collection-title">Quặng trang trí</div>
+        <div id="ore-list" class="ore-list"></div>
+      </div>
+      <div class="zone-actions" id="zone-actions"></div>
+    </section>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
