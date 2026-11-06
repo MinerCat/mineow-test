@@ -314,7 +314,7 @@ html, body {
 /* —— ZONE SCENE —— */
 #screen-zone {
   background-size: cover;
-  background-position: center;
+  background-position: center 28%;
 }
 .zone-header {
   position: absolute;

@@ -13,7 +13,7 @@ const ZONES = [
     name: 'Sảnh Tượng Mèo',
     blurb: 'Chào · Ngồi · Dâng quặng',
     emoji: '🗿',
-    bg: 'art/bg_sanh.jpg',
+    bg: 'art/bg_sanh.webp',
     ambient: 'cave',
     seats: 12,
     actions: [
@@ -28,7 +28,7 @@ const ZONES = [
     name: 'Tháp Chuông Mỏ',
     blurb: 'Ngân chuông mỏ',
     emoji: '🔔',
-    bg: 'art/bg_chuong.jpg',
+    bg: 'art/bg_chuong.webp',
     ambient: 'bell',
     seats: 8,
     actions: [
@@ -42,7 +42,7 @@ const ZONES = [
     name: 'Hành Lang Đèn',
     blurb: 'Thắp đèn thợ mỏ',
     emoji: '🏮',
-    bg: 'art/bg_den.jpg',
+    bg: 'art/bg_den.webp',
     ambient: 'cave',
     seats: 16,
     actions: [
@@ -56,7 +56,7 @@ const ZONES = [
     name: 'Mạch Vàng',
     blurb: 'Gõ nhẹ · nhặt quặng trang trí',
     emoji: '✨',
-    bg: 'art/bg_mach.jpg',
+    bg: 'art/bg_mach.webp',
     ambient: 'gold',
     seats: 10,
     actions: [
@@ -70,7 +70,7 @@ const ZONES = [
     name: 'Suối Ngầm',
     blurb: 'Ngồi bên suối · thư giãn',
     emoji: '🌊',
-    bg: 'art/bg_suoi.jpg',
+    bg: 'art/bg_suoi.webp',
     ambient: 'stream',
     seats: 14,
     actions: [
