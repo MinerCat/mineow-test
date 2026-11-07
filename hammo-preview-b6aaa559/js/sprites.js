@@ -10,7 +10,8 @@ const ANIM = {
   idle: { n: 6, fps: 5 },
   run: { n: 6, fps: 9 },
   smash: { n: 6, fps: 10 },
-  sit: { n: 6, fps: 4, alias: 'fall_land' }, // soft crouch stand-in
+  sit: { n: 4, fps: 2 }, // dedicated seated breathing loop
+  greet: { n: 2, fps: 4 }, // dedicated wave
 };
 
 const cache = new Map();
@@ -25,8 +26,6 @@ export async function loadSprites() {
     const a = conf.alias || key;
     for (let i = 0; i < (ANIM[a]?.n || conf.n); i++) needed.add(url(a, i));
   }
-  // also fall_land for sit
-  for (let i = 0; i < 6; i++) needed.add(url('fall_land', i));
 
   await Promise.all([...needed].map((src) => new Promise((res, rej) => {
     if (cache.has(src)) return res();

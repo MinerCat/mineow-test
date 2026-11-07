@@ -120,7 +120,13 @@ const screens = {
 };
 
 function showScreen(name) {
+  const prev = state.screen;
   state.screen = name;
+  if (prev && prev !== name && screens[prev]) {
+    const old = screens[prev];
+    old.classList.add('leaving');
+    setTimeout(() => old.classList.remove('leaving'), 420);
+  }
   for (const [k, el] of Object.entries(screens)) {
     el.classList.toggle('active', k === name);
   }
@@ -253,6 +259,10 @@ function doAction(id) {
   }
   if (id === 'chao') {
     playGreet();
+    p.sitting = false;
+    p.targetX = p.x;
+    p.clock.set('greet');
+    p.smashUntil = 1.5;
     p.speech = 'xin chào';
     p.speechT = 2;
     state.save.greets += 1;
@@ -574,7 +584,27 @@ function setMuteUi() {
   $('btn-mute').textContent = isMuted() ? '🔇' : '🔊';
 }
 
+function addDust() {
+  const app = document.getElementById('app');
+  if (!app || app.querySelector('.dust')) return;
+  const d = document.createElement('div');
+  d.className = 'dust';
+  d.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 14; i++) {
+    const p = document.createElement('i');
+    const s = 1.5 + Math.random() * 2.5;
+    p.style.left = `${Math.random() * 100}%`;
+    p.style.width = p.style.height = `${s}px`;
+    p.style.setProperty('--dx', `${(Math.random() - 0.5) * 80}px`);
+    p.style.animationDuration = `${14 + Math.random() * 16}s`;
+    p.style.animationDelay = `${-Math.random() * 30}s`;
+    d.appendChild(p);
+  }
+  app.appendChild(d);
+}
+
 async function init() {
+  addDust();
   // bg images on screens
   screens.entry.style.backgroundImage = `url('${screens.entry.dataset.bg}')`;
   screens.map.style.backgroundImage = `url('${screens.map.dataset.bg}')`;

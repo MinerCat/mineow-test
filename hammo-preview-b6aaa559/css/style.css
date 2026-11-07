@@ -87,7 +87,20 @@ html, body {
   background-position: center top;
   background-repeat: no-repeat;
 }
-.screen.active { display: flex; }
+.screen.active { display: flex; animation: screenIn 0.42s ease both; }
+.screen.leaving { display: flex; animation: screenOut 0.4s ease both; pointer-events: none; z-index: 1; }
+.screen.active { z-index: 2; }
+@keyframes screenIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes screenOut { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .screen.active, .screen.leaving { animation: none; } }
+/* ambient dust */
+.dust { position: absolute; inset: 0; pointer-events: none; z-index: 5; overflow: hidden; }
+.dust i { position: absolute; bottom: -10px; width: 3px; height: 3px; border-radius: 50%;
+  background: rgba(255, 222, 160, 0.55); box-shadow: 0 0 6px rgba(255, 200, 120, 0.5);
+  animation: dustRise linear infinite; opacity: 0; }
+@keyframes dustRise { 0% { transform: translate(0,0); opacity: 0; } 15% { opacity: .7; }
+  85% { opacity: .5; } 100% { transform: translate(var(--dx), -105dvh); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .dust { display: none; } }
 
 .mute-btn {
   position: absolute;
@@ -198,11 +211,14 @@ html, body {
 .btn-action {
   flex: 1;
   min-width: 0;
-  background: rgba(28, 18, 10, 0.82);
+  background: rgba(22, 14, 8, 0.9);
   color: var(--cream);
   border: 1.5px solid var(--panel-border);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
   padding: 12px 8px;
   border-radius: 14px;
 }
