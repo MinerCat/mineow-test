@@ -1,10 +1,11 @@
 /**
  * Frame-sprite Miner Cat (Gold Rush / Depth5).
- * Masters 512×640, foot baseline y≈600. Art faces RIGHT; LEFT = canvas flip.
+ * Masters 512×640. Measured foot row (lowest opaque, α≥32) is y≈599
+ * across idle/run/sit/greet/smash (597–600). Art faces RIGHT; LEFT = canvas flip.
  */
 export const SPRITE_W = 512;
 export const SPRITE_H = 640;
-export const SPRITE_BASELINE = 600;
+export const SPRITE_BASELINE = 599;
 
 const ANIM = {
   idle: { n: 6, fps: 5 },
@@ -61,7 +62,7 @@ export function drawCat(ctx, { anim = 'idle', frame = 0, x, groundY, facing = 1,
   const h = drawH;
   const w = (SPRITE_W / SPRITE_H) * h;
   const baselineRatio = SPRITE_BASELINE / SPRITE_H;
-  const footY = groundY;
+  const footY = groundY + 1; // 1px contact nudge so paws sit in the floor, not on a hairline
   const topY = footY - h * baselineRatio;
   ctx.save();
   ctx.globalAlpha = alpha;

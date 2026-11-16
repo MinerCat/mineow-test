@@ -88,6 +88,23 @@ const ORE_NAMES = [
 
 const SEAT_CAP = 64;
 
+/** Fraction of scene CSS height for the walking floor.
+ *  Measured from zone screenshots vs painted ground (not the old 0.82 stage line,
+ *  which left a ~30–40css-px gap). Entry/map have no cats.
+ */
+const FLOOR_FRAC = {
+  sanh: 0.860,
+  chuong: 0.862,
+  den: 0.860,
+  mach: 0.858,
+  suoi: 0.860,
+};
+
+function zoneGroundY(h, zoneId) {
+  return h * (FLOOR_FRAC[zoneId] ?? 0.86);
+}
+
+
 const state = {
   screen: 'entry',
   playerName: '',
@@ -247,7 +264,8 @@ function enterZone(id) {
 function canvasBounds() {
   const canvas = $('scene');
   const w = canvas.width;
-  return { x0: w * 0.12, x1: w * 0.88, groundY: (canvas._lh || canvas.height) * 0.82 };
+  const h = canvas._lh || canvas.clientHeight || canvas.height;
+  return { x0: w * 0.12, x1: w * 0.88, groundY: zoneGroundY(h, state.zone && state.zone.id) };
 }
 
 function doAction(id) {
@@ -512,7 +530,7 @@ function drawScene(dt) {
   ctx.fillStyle = 'rgba(8,5,3,0.18)';
   ctx.fillRect(0, h * 0.55, w, h * 0.45);
 
-  const bounds = { x0: w * 0.1, x1: w * 0.9, groundY: h * 0.82 };
+  const bounds = { x0: w * 0.1, x1: w * 0.9, groundY: zoneGroundY(h, state.zone && state.zone.id) };
   state.presence.tick(dt, bounds);
   updatePlayer(dt, bounds);
 
