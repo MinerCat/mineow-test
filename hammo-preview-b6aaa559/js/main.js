@@ -4,7 +4,8 @@ import { loadState, saveState, fmt } from './state.js';
 import { createLocalPresence } from './presence.js';
 import {
   loadMute, setMuted, isMuted, unlock,
-  playBell, playSoftClick, playLantern, playOre, playGreet, playAmbient, stopAmbient,
+  playBell, playSoftClick, playLantern, playOre, playGreet, playAmbient,
+  playSit, playPick, playTravel, playBag, playFootstep,
 } from './audio.js';
 
 const ZONES = [
@@ -131,8 +132,8 @@ function showScreen(name) {
     el.classList.toggle('active', k === name);
   }
   if (name !== 'zone') {
-    stopAmbient();
     state.presence.stop();
+    if (name === 'entry' || name === 'map') playAmbient(name);
   }
 }
 
@@ -195,7 +196,7 @@ function enterZone(id) {
   const z = ZONES.find((x) => x.id === id);
   if (!z) return;
   unlock();
-  playSoftClick();
+  playTravel();
   state.zone = z;
   state.player.x = 360;
   state.player.targetX = 360;
@@ -238,7 +239,7 @@ function enterZone(id) {
   const bounds = canvasBounds();
   state.presence.start(z.id, bounds);
 
-  playAmbient(z.ambient);
+  playAmbient(z.id);
   showScreen('zone');
   resizeCanvas();
 }
@@ -253,6 +254,7 @@ function doAction(id) {
   unlock();
   const p = state.player;
   if (id === 'map') {
+    playTravel();
     showScreen('map');
     refreshCounters();
     return;
@@ -277,12 +279,13 @@ function doAction(id) {
     if (p.sitting) {
       p.targetX = p.x;
       p.clock.set('sit');
+      playSit();
       toast(state.zone.id === 'suoi' ? 'Bạn ngồi bên suối…' : 'Bạn ngồi trên đệm đá');
     } else {
       p.clock.set('idle');
+      playSoftClick();
       toast('Bạn đứng dậy');
     }
-    playSoftClick();
     return;
   }
   if (id === 'dang') {
@@ -328,7 +331,7 @@ function doAction(id) {
     p.sitting = false;
     p.clock.set('smash', { loop: false });
     p.smashUntil = 0.65;
-    playOre();
+    playPick();
     const ore = ORE_NAMES[Math.floor(Math.random() * ORE_NAMES.length)];
     state.save.ores.push({ id: `${now}`, name: ore, at: now });
     state.save.pickCooldownUntil = now + 45000; // 45s — gentle, no grind
@@ -347,7 +350,7 @@ function doAction(id) {
         ? ores.map((o) => `<div>· ${o.name}</div>`).join('')
         : '<div>Chưa có quặng nào</div>';
     }
-    playSoftClick();
+    playBag();
   }
 }
 
@@ -413,8 +416,14 @@ function updatePlayer(dt, bounds) {
     p.x += Math.sign(dx) * Math.min(Math.abs(dx), 120 * dt);
     p.x = Math.max(bounds.x0, Math.min(bounds.x1, p.x));
     p.clock.set('run');
+    state.footAcc = (state.footAcc || 0) + dt;
+    if (state.footAcc >= 0.36) {
+      state.footAcc = 0;
+      playFootstep();
+    }
   } else {
     p.clock.set('idle');
+    state.footAcc = 0;
   }
   p.clock.update(dt);
 }
@@ -581,7 +590,12 @@ function loop(now) {
 }
 
 function setMuteUi() {
-  $('btn-mute').textContent = isMuted() ? '🔇' : '🔊';
+  const btn = $('btn-mute');
+  const m = isMuted();
+  btn.textContent = m ? '🔇' : '🔊';
+  btn.setAttribute('aria-label', m ? 'Bật tiếng' : 'Tắt tiếng');
+  btn.setAttribute('title', m ? 'Bật tiếng' : 'Tắt tiếng');
+  btn.setAttribute('aria-pressed', m ? 'true' : 'false');
 }
 
 function addDust() {
@@ -611,11 +625,11 @@ async function init() {
 
   loadMute();
   setMuteUi();
+  playAmbient('entry');
   $('btn-mute').addEventListener('click', () => {
+    unlock();
     setMuted(!isMuted());
     setMuteUi();
-    if (isMuted()) stopAmbient();
-    else if (state.screen === 'zone' && state.zone) playAmbient(state.zone.ambient);
   });
 
   state.playerName = state.save.name || randomName();
@@ -630,7 +644,7 @@ async function init() {
   $('btn-reroll').addEventListener('click', () => { unlock(); rerollName(); });
   $('btn-enter').addEventListener('click', () => {
     unlock();
-    playSoftClick();
+    playTravel();
     showScreen('map');
     refreshCounters();
   });
