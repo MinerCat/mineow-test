@@ -11,8 +11,8 @@ const ANIM = {
   idle: { n: 6, fps: 5 },
   run: { n: 6, fps: 9 },
   smash: { n: 6, fps: 10 },
-  sit: { n: 4, fps: 2 }, // dedicated seated breathing loop
-  greet: { n: 2, fps: 4 }, // dedicated wave
+  sit: { n: 8, fps: 5 }, // chest breath + tail flick, feet planted
+  greet: { n: 8, fps: 10 }, // clearly visible wave
 };
 
 const cache = new Map();

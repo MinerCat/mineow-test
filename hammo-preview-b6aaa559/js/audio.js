@@ -262,8 +262,8 @@ export function playOre() {
 }
 
 export function playGreet() {
-  // sfx/chao_meo and cat/meo_chao share the same MP3; play one meow only.
-  playStem('sfx/chao_meo', { vol: 0.55 });
+  playStem('sfx/chao_meo', { vol: 0.52 });
+  playStem('cat/meo_chao', { vol: 0.5, when: 0.04 });
 }
 
 export function playSit() {

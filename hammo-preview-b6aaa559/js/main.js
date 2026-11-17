@@ -1,5 +1,5 @@
 import { randomName } from './names.js';
-import { loadSprites, drawCat, AnimClock, SPRITE_BASELINE, SPRITE_H } from './sprites.js';
+import { loadSprites, drawCat, AnimClock, SPRITE_BASELINE, SPRITE_H, animMeta } from './sprites.js';
 import { loadState, saveState, fmt } from './state.js';
 import { createLocalPresence } from './presence.js';
 import {
@@ -180,21 +180,38 @@ function rerollName() {
   playSoftClick();
 }
 
+/** Pin tops as % of the map stage (bg is cover + center top; height-constrained
+ *  portrait views map 1:1 to the 1280px cross-section). Measured from chamber midlines.
+ */
+const MAP_PIN = {
+  sanh:   { top: '8.5%',  height: '18%' },
+  chuong: { top: '26.5%', height: '18%' },
+  den:    { top: '44.5%', height: '17%' },
+  mach:   { top: '61.5%', height: '18%' },
+  suoi:   { top: '75.5%', height: '18%' },
+};
+
 function buildMap() {
   const list = $('zone-list');
   list.innerHTML = '';
   for (const z of ZONES) {
+    const pos = MAP_PIN[z.id] || { top: '0%', height: '18%' };
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'zone-card';
     btn.dataset.zone = z.id;
+    btn.style.top = pos.top;
+    btn.style.height = pos.height;
+    btn.setAttribute('aria-label', z.name);
     btn.innerHTML = `
-      <div class="zone-emoji">${z.emoji}</div>
-      <div class="zone-meta">
-        <strong>${z.name}</strong>
-        <span>${z.blurb}</span>
-      </div>
-      <div class="zone-seats">Còn ${z.seats}</div>
+      <span class="zone-pin-label">
+        <span class="zone-emoji">${z.emoji}</span>
+        <span class="zone-meta">
+          <strong>${z.name}</strong>
+          <span>${z.blurb}</span>
+        </span>
+        <span class="zone-seats">Còn ${z.seats}</span>
+      </span>
     `;
     btn.addEventListener('click', () => enterZone(z.id));
     list.appendChild(btn);
@@ -282,7 +299,7 @@ function doAction(id) {
     p.sitting = false;
     p.targetX = p.x;
     p.clock.set('greet');
-    p.smashUntil = 1.5;
+    p.smashUntil = 1.6;
     p.speech = 'xin chào';
     p.speechT = 2;
     state.save.greets += 1;
@@ -566,8 +583,8 @@ function drawScene(dt) {
   for (const a of actors) {
     const isPlayer = a.kind === 'player';
     const anim = isPlayer ? state.player.clock.anim : a.anim;
-    const frame = isPlayer ? state.player.clock.frame : Math.floor((a.clockT || 0) * (anim === 'run' ? 9 : 5)) % 6;
-    // update npc frame via clockT already advancing
+    const meta = animMeta(anim);
+    const frame = isPlayer ? state.player.clock.frame : Math.floor((a.clockT || 0) * meta.fps) % meta.n;
     drawCat(ctx, {
       anim,
       frame,

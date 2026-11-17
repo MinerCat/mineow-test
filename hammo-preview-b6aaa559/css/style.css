@@ -229,12 +229,20 @@ html, body {
 
 /* —— MAP —— */
 #screen-map {
-  padding: 16px 14px calc(12px + var(--safe-bottom));
+  padding: 0;
+  background-size: cover;
+  background-position: center top;
   background-blend-mode: normal;
 }
 .map-header {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 5;
   display: flex; align-items: center; gap: 10px;
-  margin-bottom: 10px;
+  margin: 0;
+  padding: 12px 56px 20px 14px; /* room for the mute button */
+  background: linear-gradient(180deg, rgba(10,6,4,0.78), transparent);
+  pointer-events: none;
 }
 .map-titles h2 {
   margin: 0;
@@ -249,63 +257,103 @@ html, body {
   color: rgba(243,230,200,0.7);
 }
 .zone-list {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow: auto;
-  padding: 4px 0;
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: block;
+  overflow: visible;
+  padding: 0;
+  pointer-events: none;
 }
+/* Full-row hit area on each chamber; compact label sits on the art, not a covering card. */
 .zone-card {
+  position: absolute;
+  left: 0; right: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: rgba(12, 8, 5, 0.62);
-  border: 1.5px solid rgba(232,196,106,0.4);
+  padding: 0 12px;
+  border: none;
+  background: transparent;
   cursor: pointer;
   text-align: left;
   color: inherit;
   font-family: inherit;
+  pointer-events: auto;
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+}
+.zone-pin-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(78%, 320px);
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgba(12, 8, 5, 0.62);
+  border: 1.5px solid rgba(232,196,106,0.4);
   backdrop-filter: blur(6px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  pointer-events: none;
   transition: border-color 0.15s, background 0.15s;
 }
-.zone-card:active, .zone-card:hover {
+.zone-card:hover .zone-pin-label,
+.zone-card:active .zone-pin-label,
+.zone-card:focus-visible .zone-pin-label {
   border-color: var(--gold);
-  background: rgba(30, 20, 10, 0.75);
+  background: rgba(30, 20, 10, 0.78);
+}
+.zone-card:focus-visible {
+  outline: none;
+}
+/* Keep the Suối label above the footer counters; the row below stays tappable. */
+.zone-card[data-zone="suoi"] {
+  align-items: flex-start;
+  padding-top: 6px;
 }
 .zone-emoji {
-  width: 42px; height: 42px;
-  border-radius: 12px;
+  width: 32px; height: 32px;
+  border-radius: 10px;
   display: grid; place-items: center;
-  font-size: 22px;
+  font-size: 18px;
   background: rgba(232,196,106,0.12);
   flex-shrink: 0;
 }
 .zone-meta { flex: 1; min-width: 0; }
 .zone-meta strong {
   display: block;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--gold-bright);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .zone-meta span {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   color: rgba(243,230,200,0.65);
-  margin-top: 2px;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .zone-seats {
   font-size: 11px;
   font-weight: 600;
   color: #9fdfb0;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .map-footer {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 5;
   display: flex; flex-direction: column; gap: 8px;
   align-items: center;
-  padding-top: 8px;
+  padding: 16px 12px calc(12px + var(--safe-bottom));
+  background: linear-gradient(0deg, rgba(10,6,4,0.88), rgba(10,6,4,0.3) 70%, transparent);
+  pointer-events: none;
 }
 .counter {
   padding: 8px 18px;
