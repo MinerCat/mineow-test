@@ -152,6 +152,7 @@ function showScreen(name) {
     state.presence.stop();
     if (name === 'entry' || name === 'map') playAmbient(name);
   }
+  if (name === 'map') layoutMapPins();
 }
 
 function toast(msg, ms = 2200) {
@@ -180,28 +181,86 @@ function rerollName() {
   playSoftClick();
 }
 
-/** Pin tops as % of the map stage (bg is cover + center top; height-constrained
- *  portrait views map 1:1 to the 1280px cross-section). Measured from chamber midlines.
+/** bg_zones.jpg is 720×1280. #screen-map uses background-size:auto 100%
+ *  and background-position:center top, so the full cross-section height is
+ *  always visible (short viewports letterbox the sides instead of cropping
+ *  the stream). Chamber bands were measured from the shelf midlines.
  */
-const MAP_PIN = {
-  sanh:   { top: '8.5%',  height: '18%' },
-  chuong: { top: '26.5%', height: '18%' },
-  den:    { top: '44.5%', height: '17%' },
-  mach:   { top: '61.5%', height: '18%' },
-  suoi:   { top: '75.5%', height: '18%' },
+const MAP_ART = { w: 720, h: 1280 };
+const MAP_CHAMBERS = {
+  sanh:   { top: 0.020, bot: 0.225, pin: 0.175 },
+  chuong: { top: 0.255, bot: 0.430, pin: 0.355 },
+  den:    { top: 0.455, bot: 0.605, pin: 0.530 },
+  mach:   { top: 0.625, bot: 0.790, pin: 0.705 },
+  suoi:   { top: 0.815, bot: 0.995, pin: 0.875 },
 };
+
+function mapArtRect(stage) {
+  const sw = stage.clientWidth;
+  const sh = stage.clientHeight;
+  const scale = sh / MAP_ART.h;
+  const rh = MAP_ART.h * scale;
+  const rw = MAP_ART.w * scale;
+  return { sw, sh, scale, rw, rh, left: (sw - rw) / 2, top: 0 };
+}
+
+function layoutMapPins() {
+  const stage = $('screen-map');
+  if (!stage || !stage.clientHeight) return;
+  const art = mapArtRect(stage);
+  const stageBox = stage.getBoundingClientRect();
+  const footer = stage.querySelector('.map-footer');
+  const footerTop = footer
+    ? footer.getBoundingClientRect().top - stageBox.top
+    : art.sh;
+  const gap = 8;
+
+  const cards = [...stage.querySelectorAll('.zone-card')];
+  const placed = [];
+  for (const btn of cards) {
+    const ch = MAP_CHAMBERS[btn.dataset.zone];
+    if (!ch) continue;
+    const bandTop = art.top + ch.top * art.rh;
+    const bandBot = art.top + ch.bot * art.rh;
+    const visTop = Math.max(0, bandTop);
+    btn.style.top = `${Math.round(visTop)}px`;
+    btn.style.height = `${Math.max(48, Math.round(Math.min(art.sh, bandBot) - visTop))}px`;
+    placed.push({ btn, ch, visTop, bandTop, bandBot, art });
+  }
+
+  // Place labels from the bottom up so Suối sits above the counters first,
+  // then Mạch cannot slide down on top of it.
+  let nextBottomLimit = footerTop - gap;
+  for (const p of placed.slice().reverse()) {
+    const label = p.btn.querySelector('.zone-pin-label');
+    if (!label) continue;
+    const lh = label.offsetHeight || 50;
+    let cy = p.art.top + p.ch.pin * p.art.rh;
+    let top = cy - lh / 2;
+    let bot = cy + lh / 2;
+    if (bot > nextBottomLimit) {
+      bot = nextBottomLimit;
+      top = bot - lh;
+    }
+    const minTop = Math.max(p.visTop + 2, 0);
+    if (top < minTop) {
+      top = minTop;
+      bot = top + lh;
+    }
+    const cardTop = parseFloat(p.btn.style.top) || 0;
+    label.style.top = `${Math.round(top - cardTop)}px`;
+    nextBottomLimit = top - gap;
+  }
+}
 
 function buildMap() {
   const list = $('zone-list');
   list.innerHTML = '';
   for (const z of ZONES) {
-    const pos = MAP_PIN[z.id] || { top: '0%', height: '18%' };
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'zone-card';
     btn.dataset.zone = z.id;
-    btn.style.top = pos.top;
-    btn.style.height = pos.height;
     btn.setAttribute('aria-label', z.name);
     btn.innerHTML = `
       <span class="zone-pin-label">
@@ -687,9 +746,14 @@ async function init() {
   const canvas = $('scene');
   canvas.addEventListener('pointerdown', onSceneTap);
 
-  window.addEventListener('resize', () => {
+  const onViewport = () => {
     if (state.screen === 'zone') resizeCanvas();
-  });
+    if (state.screen === 'map') layoutMapPins();
+  };
+  window.addEventListener('resize', onViewport);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', onViewport);
+  }
 
   try {
     await loadSprites();
