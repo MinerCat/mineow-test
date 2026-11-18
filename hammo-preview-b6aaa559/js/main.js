@@ -7,6 +7,12 @@ import {
   playBell, playSoftClick, playLantern, playOre, playGreet, playAmbient,
   playSit, playPick, playTravel, playBag, playFootstep,
 } from './audio.js';
+import {
+  preloadLayers, setZone, clearZone, isReady as layersReady,
+  tickParallax, setPlayerNormX, requestTiltPermission,
+  drawWorldLayer, layerOffset, getZoneMeta, getCam, noteFps, getFps,
+} from './parallax.js';
+import { resetAtmos, drawAtmosMid, drawAtmosFront } from './atmos.js';
 
 const ZONES = [
   {
@@ -300,7 +306,11 @@ function enterZone(id) {
   state.collectionOpen = false;
   $('collection').hidden = true;
 
-  screens.zone.style.backgroundImage = `url('${z.bg}')`;
+  const okLayers = setZone(z.id);
+  screens.zone.style.backgroundImage = okLayers ? 'none' : `url('${z.bg}')`;
+  screens.zone.classList.toggle('has-layers', okLayers);
+  resetAtmos(z.id);
+  requestTiltPermission();
   $('zone-title').textContent = z.name;
   $('zone-sub').textContent = `Hầm Mỏ Bình Yên · Còn ${z.seats} chỗ ngồi`;
   if (z.id === 'sanh') {
@@ -328,20 +338,34 @@ function enterZone(id) {
     actions.appendChild(b);
   }
 
-  const canvas = $('scene');
-  const bounds = canvasBounds();
-  state.presence.start(z.id, bounds);
-
   playAmbient(z.id);
   showScreen('zone');
   resizeCanvas();
+  const bounds = canvasBounds();
+  state.presence.start(z.id, bounds);
+}
+
+function frontRow(h, zoneId) {
+  const meta = getZoneMeta(zoneId);
+  const row = meta && meta.rows && meta.rows.find((r) => r.id === 'front');
+  const floor = (row && row.floor) || (FLOOR_FRAC[zoneId] ?? 0.86);
+  const o = layerOffset('near');
+  return { floor, groundY: h * floor + (o.y || 0), x0: row ? row.x0 : 0.12, x1: row ? row.x1 : 0.88 };
 }
 
 function canvasBounds() {
   const canvas = $('scene');
-  const w = canvas.width;
+  const w = canvas._lw || canvas.clientWidth || canvas.width;
   const h = canvas._lh || canvas.clientHeight || canvas.height;
-  return { x0: w * 0.12, x1: w * 0.88, groundY: zoneGroundY(h, state.zone && state.zone.id) };
+  const fr = frontRow(h, state.zone && state.zone.id);
+  const meta = getZoneMeta(state.zone && state.zone.id);
+  return {
+    w, h,
+    x0: w * fr.x0,
+    x1: w * fr.x1,
+    groundY: fr.groundY,
+    rows: (meta && meta.rows) || null,
+  };
 }
 
 function doAction(id) {
@@ -349,6 +373,8 @@ function doAction(id) {
   const p = state.player;
   if (id === 'map') {
     playTravel();
+    clearZone();
+    screens.zone.classList.remove('has-layers');
     showScreen('map');
     refreshCounters();
     return;
@@ -476,6 +502,7 @@ function scenePoint(ev) {
 
 function onSceneTap(ev) {
   if (state.screen !== 'zone') return;
+  requestTiltPermission();
   // ignore taps on action bar area roughly
   const pt = scenePoint(ev);
   const h = $('scene')._lh || 800;
@@ -520,6 +547,9 @@ function updatePlayer(dt, bounds) {
     state.footAcc = 0;
   }
   p.clock.update(dt);
+  const canvas = $('scene');
+  const w = canvas._lw || canvas.clientWidth || 1;
+  setPlayerNormX(p.x / w);
 }
 
 function drawNameTag(ctx, text, x, y, highlight = false) {
@@ -594,6 +624,47 @@ function drawOfferGlow(ctx, bounds) {
   ctx.restore();
 }
 
+function actorGroundY(a, h, zoneId) {
+  if (a.kind === 'player') return frontRow(h, zoneId).groundY;
+  const frac = (a.floorFrac != null) ? a.floorFrac : (FLOOR_FRAC[zoneId] ?? 0.86);
+  const z = a.z != null ? a.z : 1;
+  const layer = z < 0.55 ? 'mid' : 'near';
+  const o = layerOffset(layer);
+  return h * frac + (o.y || 0);
+}
+
+function drawOneActor(ctx, a, h, zoneId, drawH, withTag) {
+  const isPlayer = a.kind === 'player';
+  const anim = isPlayer ? state.player.clock.anim : a.anim;
+  const meta = animMeta(anim);
+  const frame = isPlayer ? state.player.clock.frame : Math.floor((a.clockT || 0) * meta.fps) % meta.n;
+  const groundY = actorGroundY(a, h, zoneId);
+  const scale = isPlayer ? 1 : (a.scale != null ? a.scale : 0.92);
+  const alpha = isPlayer ? 1 : (a.alpha != null ? a.alpha : 0.92);
+  // soft contact shadow at this depth
+  ctx.save();
+  ctx.fillStyle = `rgba(0,0,0,${0.22 * alpha})`;
+  ctx.beginPath();
+  ctx.ellipse(a.x, groundY + 5, 22 * scale, 7 * scale, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  drawCat(ctx, {
+    anim,
+    frame,
+    x: a.x,
+    groundY,
+    facing: a.facing,
+    drawH: Math.round(drawH * scale),
+    alpha,
+  });
+  if (withTag) {
+    const tagY = groundY - drawH * scale * (SPRITE_BASELINE / SPRITE_H) - 6;
+    drawNameTag(ctx, a.name, a.x, tagY, isPlayer);
+    if (a.speech) drawNameTag(ctx, a.speech, a.x, tagY - 20, false);
+  }
+  return { groundY, scale };
+}
+
 function drawScene(dt) {
   if (state.screen !== 'zone' || !state.zone) return;
   const canvas = $('scene');
@@ -602,30 +673,27 @@ function drawScene(dt) {
   const h = canvas._lh || canvas.clientHeight;
   ctx.clearRect(0, 0, w, h);
 
-  // soft vignette so sprites read on busy bg
-  ctx.fillStyle = 'rgba(8,5,3,0.18)';
-  ctx.fillRect(0, h * 0.55, w, h * 0.45);
+  tickParallax(dt);
 
-  const bounds = { x0: w * 0.1, x1: w * 0.9, groundY: zoneGroundY(h, state.zone && state.zone.id) };
+  const zoneId = state.zone.id;
+  const bounds = canvasBounds();
   state.presence.tick(dt, bounds);
   updatePlayer(dt, bounds);
 
   if (state.offerGlow > 0) state.offerGlow = Math.max(0, state.offerGlow - dt);
 
-  drawLanterns(ctx);
-  drawOfferGlow(ctx, bounds);
-
-  // soft floor band so feet read against busy art
-  ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,0.28)';
-  ctx.beginPath();
-  ctx.ellipse(w/2, bounds.groundY + 6, w * 0.42, 18, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  const ready = layersReady();
+  if (ready) {
+    drawWorldLayer(ctx, 'far', w, h);
+    drawWorldLayer(ctx, 'mid', w, h);
+  } else {
+    // CSS background is still showing; keep the old soft wash
+    ctx.fillStyle = 'rgba(8,5,3,0.18)';
+    ctx.fillRect(0, h * 0.55, w, h * 0.45);
+  }
 
   const drawH = Math.round(Math.min(180, h * 0.28));
   const npcs = state.presence.list();
-  // depth sort by y (same ground) then x
   const actors = [
     ...npcs.map((c) => ({ kind: 'npc', ...c })),
     {
@@ -636,31 +704,36 @@ function drawScene(dt) {
       anim: state.player.clock.anim,
       frame: state.player.clock.frame,
       speech: state.player.speech,
+      z: 1,
+      floorFrac: frontRow(h, zoneId).floor,
+      scale: 1,
+      alpha: 1,
     },
-  ].sort((a, b) => a.x - b.x);
+  ].sort((a, b) => (a.z ?? 1) - (b.z ?? 1) || (a.kind === 'player') - (b.kind === 'player') || a.x - b.x);
+  if (window.__mineowV8) window.__mineowV8.debugActors = actors.map(a => ({kind:a.kind,name:a.name,x:+a.x.toFixed(1),z:a.z,floor:a.floorFrac,scale:a.scale,gy:actorGroundY(a,h,zoneId)}));
 
+  if (ready) drawWorldLayer(ctx, 'near', w, h);
+
+  drawLanterns(ctx);
+  drawOfferGlow(ctx, bounds);
+  drawAtmosMid(ctx, w, h, zoneId, !!(getCam() && getCam().reduced));
+
+  // All cats after the near floor so feet sit on the painted ground;
+  // the FG layer (front lip, side props) still draws in front of them.
+  for (const a of actors) drawOneActor(ctx, a, h, zoneId, drawH, false);
+  if (ready) drawWorldLayer(ctx, 'fg', w, h);
+  drawAtmosFront(ctx, w, h, zoneId, !!(getCam() && getCam().reduced));
+
+  // Names stay readable above the FG lip.
   for (const a of actors) {
     const isPlayer = a.kind === 'player';
-    const anim = isPlayer ? state.player.clock.anim : a.anim;
-    const meta = animMeta(anim);
-    const frame = isPlayer ? state.player.clock.frame : Math.floor((a.clockT || 0) * meta.fps) % meta.n;
-    drawCat(ctx, {
-      anim,
-      frame,
-      x: a.x,
-      groundY: bounds.groundY,
-      facing: a.facing,
-      drawH: isPlayer ? drawH : drawH * 0.92,
-      alpha: isPlayer ? 1 : 0.92,
-    });
-    const tagY = bounds.groundY - drawH * (SPRITE_BASELINE / SPRITE_H) - 6;
+    const groundY = actorGroundY(a, h, zoneId);
+    const scale = isPlayer ? 1 : (a.scale != null ? a.scale : 0.92);
+    const tagY = groundY - drawH * scale * (SPRITE_BASELINE / SPRITE_H) - 6;
     drawNameTag(ctx, a.name, a.x, tagY, isPlayer);
-    if (a.speech) {
-      drawNameTag(ctx, a.speech, a.x, tagY - 20, false);
-    }
+    if (a.speech) drawNameTag(ctx, a.speech, a.x, tagY - 20, false);
   }
 
-  // hint
   ctx.save();
   ctx.font = '500 11px "Be Vietnam Pro", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(243,230,200,0.28)';
@@ -670,7 +743,14 @@ function drawScene(dt) {
 }
 
 let last = performance.now();
+let hiddenPause = false;
+document.addEventListener('visibilitychange', () => {
+  hiddenPause = document.hidden;
+  if (!document.hidden) last = performance.now();
+});
 function loop(now) {
+  requestAnimationFrame(loop);
+  if (hiddenPause || document.hidden) return;
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   if (state.toastTimer > 0) {
@@ -680,7 +760,7 @@ function loop(now) {
     }
   }
   drawScene(dt);
-  requestAnimationFrame(loop);
+  if (state.screen === 'zone') noteFps(dt);
 }
 
 function setMuteUi() {
@@ -738,6 +818,7 @@ async function init() {
   $('btn-reroll').addEventListener('click', () => { unlock(); rerollName(); });
   $('btn-enter').addEventListener('click', () => {
     unlock();
+    requestTiltPermission();
     playTravel();
     showScreen('map');
     refreshCounters();
@@ -756,14 +837,17 @@ async function init() {
   }
 
   try {
-    await loadSprites();
+    await Promise.all([loadSprites(), preloadLayers().catch((e) => {
+      console.warn('layers', e);
+      return null;
+    })]);
     state.ready = true;
   } catch (e) {
     console.error(e);
     toast('Không tải được hình mèo');
   }
 
-  // preload zone bgs
+  // preload zone bgs (fallback while layers load / as map art)
   for (const z of ZONES) loadBg(z.bg);
   loadBg('art/bg_entry.jpg');
   loadBg('art/bg_zones.jpg');

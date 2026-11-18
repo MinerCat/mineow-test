@@ -34,11 +34,17 @@ export function createLocalPresence({ count = 4, seed = Date.now() } = {}) {
 
   function spawn(bounds) {
     const { x0, x1, groundY } = bounds;
+    const rows = (bounds.rows && bounds.rows.length)
+      ? bounds.rows.filter((r) => r.id !== 'front')
+      : [{ id: 'front', z: 1, floor: null, scale: 0.92, alpha: 0.92, x0: 0.12, x1: 0.88 }];
     cats = [];
     for (let i = 0; i < count; i++) {
       const name = uniqueName(used, rng);
       used.add(name);
-      const x = x0 + rng() * (x1 - x0);
+      const row = rows[i % rows.length];
+      const xa = (row.x0 != null ? row.x0 : 0.12);
+      const xb = (row.x1 != null ? row.x1 : 0.88);
+      const x = (bounds.w || (x1 / 0.88) || 720) * (xa + rng() * Math.max(0.05, xb - xa));
       const sitting = rng() > 0.45;
       cats.push({
         id: `npc-${zoneId}-${i}`,
@@ -49,6 +55,13 @@ export function createLocalPresence({ count = 4, seed = Date.now() } = {}) {
         anim: sitting ? 'sit' : 'idle',
         sitting,
         groundY,
+        row,
+        z: row.z ?? 1,
+        floorFrac: row.floor,
+        scale: row.scale ?? 0.92,
+        alpha: row.alpha ?? 0.92,
+        x0: xa,
+        x1: xb,
         speech: null,
         speechT: 0,
         wait: rng() * 4,
@@ -73,8 +86,12 @@ export function createLocalPresence({ count = 4, seed = Date.now() } = {}) {
       return cats.map((c) => ({ ...c }));
     },
     tick(dt, bounds) {
-      const { x0, x1 } = bounds;
+      const w = bounds.w || 720;
       for (const c of cats) {
+        const x0 = (c.x0 != null ? c.x0 * w : bounds.x0);
+        const x1 = (c.x1 != null ? c.x1 * w : bounds.x1);
+        if (c.x < x0) { c.x = x0; c.targetX = x0; }
+        if (c.x > x1) { c.x = x1; c.targetX = x1; }
         c.clockT += dt;
         if (c.speechT > 0) {
           c.speechT -= dt;

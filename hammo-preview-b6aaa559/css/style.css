@@ -388,6 +388,10 @@ html, body {
   background-size: cover;
   background-position: center 28%;
 }
+#screen-zone.has-layers {
+  background-image: none !important;
+  background-color: #0a0705;
+}
 .zone-header {
   position: absolute;
   top: 0; left: 0; right: 0;
