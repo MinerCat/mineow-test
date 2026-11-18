@@ -11,6 +11,7 @@ import {
   preloadLayers, setZone, clearZone, isReady as layersReady,
   tickParallax, setPlayerNormX, requestTiltPermission,
   drawWorldLayer, layerOffset, getZoneMeta, getCam, noteFps, getFps,
+  getCover,
 } from './parallax.js';
 import { resetAtmos, drawAtmosMid, drawAtmosFront } from './atmos.js';
 
@@ -109,6 +110,98 @@ const FLOOR_FRAC = {
 function zoneGroundY(h, zoneId) {
   return h * (FLOOR_FRAC[zoneId] ?? 0.86);
 }
+
+const ART_W = 768;
+const ART_H = 1024;
+
+function rowToScreen(row, w, h) {
+  if (!row) {
+    return { sx0: w * 0.12, sx1: w * 0.88, groundY: h * 0.86 };
+  }
+  const cover = getCover(w, h);
+  const space = row.space || 'screen';
+  let sx0, sx1, groundY;
+  if (space === 'image') {
+    sx0 = cover.dx + row.x0 * ART_W * cover.scale;
+    sx1 = cover.dx + row.x1 * ART_W * cover.scale;
+    groundY = cover.dy + row.floor * ART_H * cover.scale;
+  } else {
+    sx0 = (row.x0 != null ? row.x0 : 0.12) * w;
+    sx1 = (row.x1 != null ? row.x1 : 0.88) * w;
+    groundY = (row.floor != null ? row.floor : 0.86) * h;
+  }
+  return { sx0, sx1, groundY, cover };
+}
+
+function rowMinGap(row, h) {
+  const drawH = Math.min(180, h * 0.28);
+  const drawW = (512 / 640) * drawH * (row && row.scale != null ? row.scale : 1);
+  return Math.max(56, drawW * 0.72);
+}
+
+function screenToImage(sx, sy, cover) {
+  return {
+    x: (sx - cover.dx) / cover.scale,
+    y: (sy - cover.dy) / cover.scale,
+  };
+}
+
+function measureTag(ctx, text) {
+  ctx.font = '600 11px "Be Vietnam Pro", system-ui, sans-serif';
+  const w = ctx.measureText(text).width + 14;
+  return { w, h: 18 };
+}
+
+function tagsOverlap(a, b) {
+  if (a.hidden || b.hidden) return false;
+  const ax0 = a.x - a.w / 2;
+  const ax1 = a.x + a.w / 2;
+  const bx0 = b.x - b.w / 2;
+  const bx1 = b.x + b.w / 2;
+  if (ax0 >= bx1 - 1 || bx0 >= ax1 - 1) return false;
+  const ay0 = a.y - a.h;
+  const ay1 = a.y;
+  const by0 = b.y - b.h;
+  const by1 = b.y;
+  return ay0 < by1 - 1 && by0 < ay1 - 1;
+}
+
+function layoutNameTags(ctx, items, canvasW) {
+  const tags = items.map((it) => {
+    const m = measureTag(ctx, it.text);
+    return {
+      ...it,
+      w: m.w,
+      h: m.h,
+      y: it.baseY,
+      hidden: false,
+    };
+  });
+  const player = tags.find((t) => t.keep);
+  const placed = [];
+  if (player) placed.push(player);
+  const rest = tags.filter((t) => t !== player).sort((a, b) => a.x - b.x);
+  for (const t of rest) {
+    let ok = false;
+    for (const lift of [0, 22, 44, -24]) {
+      const y = t.baseY - lift;
+      if (y - t.h < 70) continue;
+      t.y = y;
+      // Keep the bubble on screen horizontally.
+      const half = t.w / 2;
+      if (t.x - half < 4) t.x = 4 + half;
+      if (t.x + half > canvasW - 4) t.x = canvasW - 4 - half;
+      if (!placed.some((p) => tagsOverlap(t, p))) {
+        ok = true;
+        break;
+      }
+    }
+    if (!ok) t.hidden = true;
+    else placed.push(t);
+  }
+  return tags;
+}
+
 
 
 const state = {
@@ -341,6 +434,10 @@ function enterZone(id) {
   playAmbient(z.id);
   showScreen('zone');
   resizeCanvas();
+  const laid = canvasBounds();
+  const px = laid.x0 + (laid.x1 - laid.x0) * 0.80;
+  state.player.x = px;
+  state.player.targetX = px;
   const bounds = canvasBounds();
   state.presence.start(z.id, bounds);
 }
@@ -348,23 +445,42 @@ function enterZone(id) {
 function frontRow(h, zoneId) {
   const meta = getZoneMeta(zoneId);
   const row = meta && meta.rows && meta.rows.find((r) => r.id === 'front');
-  const floor = (row && row.floor) || (FLOOR_FRAC[zoneId] ?? 0.86);
+  const canvas = $('scene');
+  const w = (canvas && (canvas._lw || canvas.clientWidth)) || 412;
+  const base = rowToScreen(row || { floor: FLOOR_FRAC[zoneId] ?? 0.86, x0: 0.12, x1: 0.88, space: 'screen' }, w, h);
   const o = layerOffset('near');
-  return { floor, groundY: h * floor + (o.y || 0), x0: row ? row.x0 : 0.12, x1: row ? row.x1 : 0.88 };
+  return {
+    floor: (row && row.floor) || (FLOOR_FRAC[zoneId] ?? 0.86),
+    groundY: base.groundY + (o.y || 0),
+    x0: base.sx0,
+    x1: base.sx1,
+    sx0: base.sx0,
+    sx1: base.sx1,
+  };
 }
 
 function canvasBounds() {
   const canvas = $('scene');
   const w = canvas._lw || canvas.clientWidth || canvas.width;
   const h = canvas._lh || canvas.clientHeight || canvas.height;
-  const fr = frontRow(h, state.zone && state.zone.id);
-  const meta = getZoneMeta(state.zone && state.zone.id);
+  const zoneId = state.zone && state.zone.id;
+  const meta = getZoneMeta(zoneId);
+  const raw = (meta && meta.rows) || [];
+  const rows = raw.map((r) => {
+    const s = rowToScreen(r, w, h);
+    return { ...r, ...s, minGap: rowMinGap(r, h) };
+  });
+  const fr = rows.find((r) => r.id === 'front');
+  const o = layerOffset('near');
+  const x0 = fr ? fr.sx0 : w * 0.12;
+  const x1 = fr ? fr.sx1 : w * 0.88;
+  const groundY = (fr ? fr.groundY : h * (FLOOR_FRAC[zoneId] ?? 0.86)) + (o.y || 0);
   return {
     w, h,
-    x0: w * fr.x0,
-    x1: w * fr.x1,
-    groundY: fr.groundY,
-    rows: (meta && meta.rows) || null,
+    x0, x1,
+    groundY,
+    rows,
+    playerX: state.player.x,
   };
 }
 
@@ -508,7 +624,8 @@ function onSceneTap(ev) {
   const h = $('scene')._lh || 800;
   if (pt.y > h * 0.88) return;
   state.player.sitting = false;
-  state.player.targetX = pt.x;
+  const b = canvasBounds();
+  state.player.targetX = Math.max(b.x0, Math.min(b.x1, pt.x));
   playSoftClick();
 }
 
@@ -626,11 +743,14 @@ function drawOfferGlow(ctx, bounds) {
 
 function actorGroundY(a, h, zoneId) {
   if (a.kind === 'player') return frontRow(h, zoneId).groundY;
-  const frac = (a.floorFrac != null) ? a.floorFrac : (FLOOR_FRAC[zoneId] ?? 0.86);
+  const canvas = $('scene');
+  const w = (canvas && (canvas._lw || canvas.clientWidth)) || 412;
+  const row = a.row || { floor: a.floorFrac, x0: a.x0, x1: a.x1, space: a.space || 'image', scale: a.scale };
+  const s = rowToScreen(row, w, h);
   const z = a.z != null ? a.z : 1;
   const layer = z < 0.55 ? 'mid' : 'near';
   const o = layerOffset(layer);
-  return h * frac + (o.y || 0);
+  return s.groundY + (o.y || 0);
 }
 
 function drawOneActor(ctx, a, h, zoneId, drawH, withTag) {
@@ -710,7 +830,6 @@ function drawScene(dt) {
       alpha: 1,
     },
   ].sort((a, b) => (a.z ?? 1) - (b.z ?? 1) || (a.kind === 'player') - (b.kind === 'player') || a.x - b.x);
-  if (window.__mineowV8) window.__mineowV8.debugActors = actors.map(a => ({kind:a.kind,name:a.name,x:+a.x.toFixed(1),z:a.z,floor:a.floorFrac,scale:a.scale,gy:actorGroundY(a,h,zoneId)}));
 
   if (ready) drawWorldLayer(ctx, 'near', w, h);
 
@@ -724,14 +843,64 @@ function drawScene(dt) {
   if (ready) drawWorldLayer(ctx, 'fg', w, h);
   drawAtmosFront(ctx, w, h, zoneId, !!(getCam() && getCam().reduced));
 
-  // Names stay readable above the FG lip.
+  // Names stay readable above the FG lip and never overlap.
+  const tagItems = [];
   for (const a of actors) {
     const isPlayer = a.kind === 'player';
     const groundY = actorGroundY(a, h, zoneId);
     const scale = isPlayer ? 1 : (a.scale != null ? a.scale : 0.92);
     const tagY = groundY - drawH * scale * (SPRITE_BASELINE / SPRITE_H) - 6;
-    drawNameTag(ctx, a.name, a.x, tagY, isPlayer);
-    if (a.speech) drawNameTag(ctx, a.speech, a.x, tagY - 20, false);
+    tagItems.push({
+      text: a.name,
+      x: a.x,
+      baseY: tagY,
+      keep: isPlayer,
+      highlight: isPlayer,
+      actor: a,
+    });
+    if (a.speech) {
+      tagItems.push({
+        text: a.speech,
+        x: a.x,
+        baseY: tagY - 22,
+        keep: false,
+        highlight: false,
+        actor: a,
+      });
+    }
+  }
+  const laid = layoutNameTags(ctx, tagItems, w);
+  for (const t of laid) {
+    if (t.hidden) continue;
+    drawNameTag(ctx, t.text, t.x, t.y, !!t.highlight);
+  }
+  if (window.__mineowV8) {
+    const cover = getCover(w, h);
+    window.__mineowV8.debugActors = actors.map((a) => {
+      const gy = actorGroundY(a, h, zoneId);
+      const img = screenToImage(a.x, gy, cover);
+      return {
+        kind: a.kind,
+        name: a.name,
+        x: +a.x.toFixed(1),
+        z: a.z,
+        floor: a.floorFrac,
+        scale: a.scale,
+        gy,
+        imgX: +img.x.toFixed(1),
+        imgY: +img.y.toFixed(1),
+        rowId: a.rowId || (a.row && a.row.id) || (a.kind === 'player' ? 'front' : null),
+      };
+    });
+    window.__mineowV8.debugTags = laid.map((t) => ({
+      text: t.text,
+      x: +t.x.toFixed(1),
+      y: +t.y.toFixed(1),
+      w: +t.w.toFixed(1),
+      h: t.h,
+      hidden: !!t.hidden,
+      keep: !!t.keep,
+    }));
   }
 
   ctx.save();
