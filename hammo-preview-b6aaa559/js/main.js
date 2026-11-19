@@ -1,5 +1,5 @@
 import { randomName } from './names.js';
-import { loadSprites, drawCat, AnimClock, SPRITE_BASELINE, SPRITE_H, animMeta } from './sprites.js';
+import { loadSprites, drawCat, AnimClock, SPRITE_BASELINE, SPRITE_H, FOOT_NUDGE, animMeta } from './sprites.js';
 import { loadState, saveState, fmt } from './state.js';
 import { createLocalPresence } from './presence.js';
 import {
@@ -447,15 +447,16 @@ function frontRow(h, zoneId) {
   const row = meta && meta.rows && meta.rows.find((r) => r.id === 'front');
   const canvas = $('scene');
   const w = (canvas && (canvas._lw || canvas.clientWidth)) || 412;
-  const base = rowToScreen(row || { floor: FLOOR_FRAC[zoneId] ?? 0.86, x0: 0.12, x1: 0.88, space: 'screen' }, w, h);
-  const o = layerOffset('near');
+  const base = rowToScreen(row || { floor: FLOOR_FRAC[zoneId] ?? 0.86, x0: 0.12, x1: 0.88, space: 'screen', layer: 'near' }, w, h);
   return {
     floor: (row && row.floor) || (FLOOR_FRAC[zoneId] ?? 0.86),
-    groundY: base.groundY + (o.y || 0),
+    groundY: base.groundY,
     x0: base.sx0,
     x1: base.sx1,
     sx0: base.sx0,
     sx1: base.sx1,
+    layer: (row && row.layer) || 'near',
+    row,
   };
 }
 
@@ -471,10 +472,9 @@ function canvasBounds() {
     return { ...r, ...s, minGap: rowMinGap(r, h) };
   });
   const fr = rows.find((r) => r.id === 'front');
-  const o = layerOffset('near');
   const x0 = fr ? fr.sx0 : w * 0.12;
   const x1 = fr ? fr.sx1 : w * 0.88;
-  const groundY = (fr ? fr.groundY : h * (FLOOR_FRAC[zoneId] ?? 0.86)) + (o.y || 0);
+  const groundY = fr ? fr.groundY : h * (FLOOR_FRAC[zoneId] ?? 0.86);
   return {
     w, h,
     x0, x1,
@@ -741,16 +741,50 @@ function drawOfferGlow(ctx, bounds) {
   ctx.restore();
 }
 
-function actorGroundY(a, h, zoneId) {
-  if (a.kind === 'player') return frontRow(h, zoneId).groundY;
+function rowFloorLayer(row, a) {
+  if (row && row.layer) return row.layer;
+  const z = a && a.z != null ? a.z : 1;
+  return z < 0.55 ? 'mid' : 'near';
+}
+
+function actorPose(a, h, zoneId) {
   const canvas = $('scene');
   const w = (canvas && (canvas._lw || canvas.clientWidth)) || 412;
-  const row = a.row || { floor: a.floorFrac, x0: a.x0, x1: a.x1, space: a.space || 'image', scale: a.scale };
+  const isPlayer = a.kind === 'player';
+  const fr = frontRow(h, zoneId);
+  const row = isPlayer ? (fr.row || { floor: fr.floor, x0: 0.12, x1: 0.88, space: 'image', layer: fr.layer || 'near' })
+    : (a.row || { floor: a.floorFrac, x0: a.x0, x1: a.x1, space: a.space || 'image', scale: a.scale, layer: a.layer });
   const s = rowToScreen(row, w, h);
-  const z = a.z != null ? a.z : 1;
-  const layer = z < 0.55 ? 'mid' : 'near';
+  const layer = isPlayer ? (fr.layer || 'near') : rowFloorLayer(row, a);
   const o = layerOffset(layer);
-  return s.groundY + (o.y || 0);
+  return {
+    x: a.x + (o.x || 0),
+    groundY: s.groundY + (o.y || 0),
+    layer,
+    offset: o,
+  };
+}
+
+function actorGroundY(a, h, zoneId) {
+  return actorPose(a, h, zoneId).groundY;
+}
+
+function drawContactShadow(ctx, x, groundY, scale, alpha) {
+  // Soft elliptical shadow sitting on the floor under the paws, scaled with depth.
+  const rx = 30 * scale;
+  const ry = 8 * scale;
+  ctx.save();
+  ctx.translate(x, groundY);
+  ctx.scale(1, ry / Math.max(rx, 1));
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+  g.addColorStop(0, `rgba(0,0,0,${0.55 * alpha})`);
+  g.addColorStop(0.4, `rgba(0,0,0,${0.26 * alpha})`);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(0, 0, rx, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawOneActor(ctx, a, h, zoneId, drawH, withTag) {
@@ -758,20 +792,16 @@ function drawOneActor(ctx, a, h, zoneId, drawH, withTag) {
   const anim = isPlayer ? state.player.clock.anim : a.anim;
   const meta = animMeta(anim);
   const frame = isPlayer ? state.player.clock.frame : Math.floor((a.clockT || 0) * meta.fps) % meta.n;
-  const groundY = actorGroundY(a, h, zoneId);
+  const pose = actorPose(a, h, zoneId);
+  const groundY = pose.groundY;
+  const x = pose.x;
   const scale = isPlayer ? 1 : (a.scale != null ? a.scale : 0.92);
   const alpha = isPlayer ? 1 : (a.alpha != null ? a.alpha : 0.92);
-  // soft contact shadow at this depth
-  ctx.save();
-  ctx.fillStyle = `rgba(0,0,0,${0.22 * alpha})`;
-  ctx.beginPath();
-  ctx.ellipse(a.x, groundY + 5, 22 * scale, 7 * scale, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  drawContactShadow(ctx, x, groundY, scale, alpha);
   drawCat(ctx, {
     anim,
     frame,
-    x: a.x,
+    x,
     groundY,
     facing: a.facing,
     drawH: Math.round(drawH * scale),
@@ -779,10 +809,10 @@ function drawOneActor(ctx, a, h, zoneId, drawH, withTag) {
   });
   if (withTag) {
     const tagY = groundY - drawH * scale * (SPRITE_BASELINE / SPRITE_H) - 6;
-    drawNameTag(ctx, a.name, a.x, tagY, isPlayer);
-    if (a.speech) drawNameTag(ctx, a.speech, a.x, tagY - 20, false);
+    drawNameTag(ctx, a.name, x, tagY, isPlayer);
+    if (a.speech) drawNameTag(ctx, a.speech, x, tagY - 20, false);
   }
-  return { groundY, scale };
+  return { groundY, scale, x };
 }
 
 function drawScene(dt) {
@@ -826,6 +856,7 @@ function drawScene(dt) {
       speech: state.player.speech,
       z: 1,
       floorFrac: frontRow(h, zoneId).floor,
+      row: frontRow(h, zoneId).row,
       scale: 1,
       alpha: 1,
     },
@@ -847,12 +878,12 @@ function drawScene(dt) {
   const tagItems = [];
   for (const a of actors) {
     const isPlayer = a.kind === 'player';
-    const groundY = actorGroundY(a, h, zoneId);
+    const pose = actorPose(a, h, zoneId);
     const scale = isPlayer ? 1 : (a.scale != null ? a.scale : 0.92);
-    const tagY = groundY - drawH * scale * (SPRITE_BASELINE / SPRITE_H) - 6;
+    const tagY = pose.groundY - drawH * scale * (SPRITE_BASELINE / SPRITE_H) - 6;
     tagItems.push({
       text: a.name,
-      x: a.x,
+      x: pose.x,
       baseY: tagY,
       keep: isPlayer,
       highlight: isPlayer,
@@ -861,7 +892,7 @@ function drawScene(dt) {
     if (a.speech) {
       tagItems.push({
         text: a.speech,
-        x: a.x,
+        x: pose.x,
         baseY: tagY - 22,
         keep: false,
         highlight: false,
@@ -877,14 +908,17 @@ function drawScene(dt) {
   if (window.__mineowV8) {
     const cover = getCover(w, h);
     window.__mineowV8.debugActors = actors.map((a) => {
-      const gy = actorGroundY(a, h, zoneId);
-      const img = screenToImage(a.x, gy, cover);
+      const pose = actorPose(a, h, zoneId);
+      const gy = pose.groundY;
+      const img = screenToImage(pose.x, gy, cover);
       return {
         kind: a.kind,
         name: a.name,
         x: +a.x.toFixed(1),
+        drawX: +pose.x.toFixed(1),
         z: a.z,
         floor: a.floorFrac,
+        layer: pose.layer,
         scale: a.scale,
         gy,
         imgX: +img.x.toFixed(1),
