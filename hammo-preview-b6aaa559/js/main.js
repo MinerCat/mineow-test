@@ -769,21 +769,51 @@ function actorGroundY(a, h, zoneId) {
   return actorPose(a, h, zoneId).groundY;
 }
 
-function drawContactShadow(ctx, x, groundY, scale, alpha) {
-  // Soft elliptical shadow sitting on the floor under the paws, scaled with depth.
-  const rx = 30 * scale;
-  const ry = 8 * scale;
+const SHADOW_TINT = {
+  sanh: [22, 12, 6],
+  chuong: [14, 10, 8],
+  den: [18, 8, 3],
+  mach: [20, 10, 4],
+  suoi: [8, 12, 16],
+};
+
+function drawContactShadow(ctx, x, groundY, scale, alpha, zoneId, anim) {
+  // Wide multiply AO darkens floor highlights (wet stone, pavers), then a
+  // tight contact disc sits under the paws. Tinted to the zone lighting.
+  const [r, g, b] = SHADOW_TINT[zoneId] || [12, 8, 4];
+  const a = alpha * (anim === 'sit' ? 0.84 : 1);
+  const rx = Math.max(18, 34 * scale);
+  const ry = Math.max(5.5, 10 * scale);
   ctx.save();
   ctx.translate(x, groundY);
-  ctx.scale(1, ry / Math.max(rx, 1));
-  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
-  g.addColorStop(0, `rgba(0,0,0,${0.55 * alpha})`);
-  g.addColorStop(0.4, `rgba(0,0,0,${0.26 * alpha})`);
-  g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = g;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.scale(1, (ry * 1.2) / Math.max(rx, 1));
+  const ao = ctx.createRadialGradient(0, 0, 0, 0, 0, rx * 1.25);
+  ao.addColorStop(0, `rgba(${r},${g},${b},${0.52 * a})`);
+  ao.addColorStop(0.5, `rgba(${r},${g},${b},${0.28 * a})`);
+  ao.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  ctx.fillStyle = ao;
   ctx.beginPath();
-  ctx.arc(0, 0, rx, 0, Math.PI * 2);
+  ctx.arc(0, 0, rx * 1.25, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  const crx = Math.max(12, 20 * scale);
+  const cry = Math.max(4, 5.5 * scale);
+  ctx.scale(1, cry / Math.max(crx, 1));
+  const core = ctx.createRadialGradient(0, 0, 0, 0, 0, crx);
+  core.addColorStop(0, `rgba(0,0,0,${0.58 * a})`);
+  core.addColorStop(0.42, `rgba(${r},${g},${b},${0.32 * a})`);
+  core.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  ctx.fillStyle = core;
+  ctx.beginPath();
+  ctx.arc(0, 0, crx, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
   ctx.restore();
 }
 
@@ -797,7 +827,7 @@ function drawOneActor(ctx, a, h, zoneId, drawH, withTag) {
   const x = pose.x;
   const scale = isPlayer ? 1 : (a.scale != null ? a.scale : 0.92);
   const alpha = isPlayer ? 1 : (a.alpha != null ? a.alpha : 0.92);
-  drawContactShadow(ctx, x, groundY, scale, alpha);
+  drawContactShadow(ctx, x, groundY, scale, alpha, zoneId, anim);
   drawCat(ctx, {
     anim,
     frame,
