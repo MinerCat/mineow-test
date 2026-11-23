@@ -272,6 +272,7 @@ export function getFps() {
 
 function exposeHook() {
   window.__mineowV8 = {
+    build: 'v12-ground-idle',
     setCam,
     getCam,
     getFps,

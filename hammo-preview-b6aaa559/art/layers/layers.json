@@ -38,7 +38,7 @@
         {
           "id": "back",
           "z": 0.42,
-          "floor": 0.745,
+          "floor": 0.734,
           "scale": 0.64,
           "alpha": 0.86,
           "space": "image",
@@ -50,12 +50,12 @@
         {
           "id": "mid",
           "z": 0.7,
-          "floor": 0.815,
+          "floor": 0.782,
           "scale": 0.84,
           "alpha": 0.88,
           "space": "image",
-          "x0": 0.275,
-          "x1": 0.725,
+          "x0": 0.28,
+          "x1": 0.7,
           "maxNpcs": 2,
           "layer": "near"
         },
@@ -152,7 +152,7 @@
         {
           "id": "back",
           "z": 0.4,
-          "floor": 0.75,
+          "floor": 0.758,
           "scale": 0.62,
           "alpha": 0.86,
           "space": "image",
@@ -164,7 +164,7 @@
         {
           "id": "mid",
           "z": 0.7,
-          "floor": 0.815,
+          "floor": 0.824,
           "scale": 0.84,
           "alpha": 0.88,
           "space": "image",
@@ -176,7 +176,7 @@
         {
           "id": "front",
           "z": 1.0,
-          "floor": 0.862,
+          "floor": 0.866,
           "scale": 1.0,
           "alpha": 1.0,
           "space": "image",
@@ -266,7 +266,7 @@
         {
           "id": "back",
           "z": 0.38,
-          "floor": 0.755,
+          "floor": 0.763,
           "scale": 0.62,
           "alpha": 0.86,
           "space": "image",
@@ -278,7 +278,7 @@
         {
           "id": "mid",
           "z": 0.68,
-          "floor": 0.815,
+          "floor": 0.824,
           "scale": 0.84,
           "alpha": 0.86,
           "space": "image",
@@ -290,7 +290,7 @@
         {
           "id": "front",
           "z": 1.0,
-          "floor": 0.86,
+          "floor": 0.864,
           "scale": 1.0,
           "alpha": 1.0,
           "space": "image",
@@ -776,7 +776,7 @@
         {
           "id": "back",
           "z": 0.36,
-          "floor": 0.513,
+          "floor": 0.536,
           "scale": 0.48,
           "alpha": 0.9,
           "space": "image",
@@ -789,7 +789,7 @@
         {
           "id": "mid",
           "z": 0.7,
-          "floor": 0.815,
+          "floor": 0.824,
           "scale": 0.8,
           "alpha": 0.9,
           "space": "image",
@@ -806,7 +806,7 @@
           "alpha": 1.0,
           "space": "image",
           "x0": 0.234,
-          "x1": 0.68,
+          "x1": 0.6,
           "layer": "near"
         }
       ],

@@ -214,18 +214,24 @@ function nudgeApart(cats, bounds) {
     }
   }
   const playerX = bounds.playerX;
-  if (playerX == null) return;
-  for (const c of cats) {
-    const b = rowBounds(c, bounds);
-    if (!b) continue;
-    const need = Math.max(b.gap, 64) * 0.55;
-    const d = c.x - playerX;
-    if (Math.abs(d) < need) {
-      const mid = (b.x0 + b.x1) / 2;
-      const dir = d === 0 ? (c.x <= mid ? -1 : 1) : Math.sign(d);
-      c.x = playerX + dir * need;
-      clampX(c, bounds);
+  if (playerX != null) {
+    for (const c of cats) {
+      const b = rowBounds(c, bounds);
+      if (!b) continue;
+      const need = Math.max(b.gap, 64) * 0.55;
+      const d = c.x - playerX;
+      if (Math.abs(d) < need) {
+        const mid = (b.x0 + b.x1) / 2;
+        const dir = d === 0 ? (c.x <= mid ? -1 : 1) : Math.sign(d);
+        c.x = playerX + dir * need;
+        clampX(c, bounds);
+      }
     }
+  }
+  // Nudges must not leave idle/sitting cats off their target, or they
+  // will start a walk cycle next tick just to walk back.
+  for (const c of cats) {
+    if (c.anim !== 'run') c.targetX = c.x;
   }
 }
 
@@ -382,6 +388,7 @@ export function createLocalPresence({ count = 4, seed = Date.now() } = {}) {
             c.facing = dx > 0 ? 1 : -1;
             c.x += Math.sign(dx) * Math.min(Math.abs(dx), 55 * dt);
           } else {
+            c.x = c.targetX;
             c.anim = 'idle';
             if (c.wait <= 0) {
               if (rng() > 0.55) {
@@ -397,6 +404,14 @@ export function createLocalPresence({ count = 4, seed = Date.now() } = {}) {
         }
       }
       nudgeApart(cats, bounds);
+    },
+    holdIdle() {
+      for (const c of cats) {
+        c.sitting = false;
+        c.anim = 'idle';
+        c.targetX = c.x;
+        c.wait = 9999;
+      }
     },
     bumpGreetNear(x, radius = 70) {
       let best = null;

@@ -1,26 +1,46 @@
 /**
  * Frame-sprite Miner Cat (Gold Rush / Depth5).
- * Masters 512×640. Solid paw sole (lowest row with α>200 over a real
- * pad width) is y≈596 across idle/run/sit/greet. The α≥32 fringe at
- * y≈599 is antialias, not the paw the eye reads. Art faces RIGHT.
+ * Masters 512×640. Art faces RIGHT.
+ *
+ * Each anim/frame has its own paw baseline (the visual sole the eye
+ * reads, not a single global line and not the faint α fringe).
+ * Idle is a single planted stance — the source "idle" strip is a walk
+ * cycle and must not play when the cat is standing still.
  */
 export const SPRITE_W = 512;
 export const SPRITE_H = 640;
-export const SPRITE_BASELINE = 591;
-export const FOOT_NUDGE = 3; // CSS px into the floor so pink pads sit in the surface
+/** Typical planted sole (idle_r_00). Prefer frameBaseline(anim, frame). */
+export const SPRITE_BASELINE = 596;
+export const FOOT_NUDGE = 3; // CSS px into the floor so pads sit in the surface
+
+// Visual sole per frame (lowest solid paw / haunch contact, not AA fringe).
+const FRAME_BASELINE = {
+  idle:  [596],
+  run:   [597, 597, 597, 597, 597, 597],
+  sit:   [597, 597, 597, 597, 597, 597, 597, 597],
+  greet: [599, 599, 599, 599, 599, 599, 599, 599],
+  smash: [599, 600, 598, 598, 600, 599],
+};
 
 const ANIM = {
-  idle: { n: 6, fps: 5 },
+  idle: { n: 1, fps: 1 },          // static planted stance (breath is a draw-time pulse)
   run: { n: 6, fps: 9 },
   smash: { n: 6, fps: 10 },
-  sit: { n: 8, fps: 5 }, // chest breath + tail flick, feet planted
-  greet: { n: 8, fps: 10 }, // clearly visible wave
+  sit: { n: 8, fps: 5 },           // chest breath + tail flick, feet planted
+  greet: { n: 8, fps: 10 },        // clearly visible wave, feet planted
 };
 
 const cache = new Map();
 
 function url(anim, i) {
   return `art/sprites/${anim}_r_${String(i).padStart(2, '0')}.webp`;
+}
+
+export function frameBaseline(anim, frame) {
+  const arr = FRAME_BASELINE[anim];
+  if (!arr || !arr.length) return SPRITE_BASELINE;
+  const i = ((frame % arr.length) + arr.length) % arr.length;
+  return arr[i];
 }
 
 export async function loadSprites() {
@@ -57,16 +77,24 @@ export function animMeta(anim) {
 /**
  * Draw cat with feet on (x, groundY). facing: 1 right, -1 left.
  * scale relative to native 512 — typical drawH ~ 140–180 on phone canvas.
+ * `clockT` (seconds) drives a tiny idle breath; legs stay planted.
  */
-export function drawCat(ctx, { anim = 'idle', frame = 0, x, groundY, facing = 1, drawH = 160, alpha = 1 }) {
+export function drawCat(ctx, {
+  anim = 'idle', frame = 0, x, groundY, facing = 1, drawH = 160, alpha = 1, clockT = 0,
+}) {
   const img = getFrame(anim, frame);
   if (!img) return;
-  const h = drawH;
-  const w = (SPRITE_W / SPRITE_H) * h;
-  const baselineRatio = SPRITE_BASELINE / SPRITE_H;
+  let h = drawH;
+  let w = (SPRITE_W / SPRITE_H) * h;
+  const baseline = frameBaseline(anim, frame);
   const footY = groundY + FOOT_NUDGE;
-  // Scale and placement are anchored at the feet, not the sprite box top.
-  const topY = footY - h * baselineRatio;
+  // Subtle chest breath only — scale toward the head, feet stay on the floor.
+  if (anim === 'idle') {
+    const pulse = 1 + 0.012 * Math.sin((clockT || 0) * Math.PI * 2 / 2.6);
+    h = drawH * pulse;
+    w = (SPRITE_W / SPRITE_H) * h;
+  }
+  const topY = footY - h * (baseline / SPRITE_H);
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(x, 0);

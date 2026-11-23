@@ -1,5 +1,5 @@
 import { randomName } from './names.js';
-import { loadSprites, drawCat, AnimClock, SPRITE_BASELINE, SPRITE_H, FOOT_NUDGE, animMeta } from './sprites.js';
+import { loadSprites, drawCat, AnimClock, SPRITE_BASELINE, SPRITE_H, FOOT_NUDGE, animMeta, frameBaseline } from './sprites.js';
 import { loadState, saveState, fmt } from './state.js';
 import { createLocalPresence } from './presence.js';
 import {
@@ -660,6 +660,7 @@ function updatePlayer(dt, bounds) {
       playFootstep();
     }
   } else {
+    p.x = p.targetX;
     p.clock.set('idle');
     state.footAcc = 0;
   }
@@ -828,6 +829,7 @@ function drawOneActor(ctx, a, h, zoneId, drawH, withTag) {
   const scale = isPlayer ? 1 : (a.scale != null ? a.scale : 0.92);
   const alpha = isPlayer ? 1 : (a.alpha != null ? a.alpha : 0.92);
   drawContactShadow(ctx, x, groundY, scale, alpha, zoneId, anim);
+  const clockT = isPlayer ? state.player.clock.t : (a.clockT || 0);
   drawCat(ctx, {
     anim,
     frame,
@@ -836,9 +838,10 @@ function drawOneActor(ctx, a, h, zoneId, drawH, withTag) {
     facing: a.facing,
     drawH: Math.round(drawH * scale),
     alpha,
+    clockT,
   });
   if (withTag) {
-    const tagY = groundY - drawH * scale * (SPRITE_BASELINE / SPRITE_H) - 6;
+    const tagY = groundY - drawH * scale * (frameBaseline(anim, frame) / SPRITE_H) - 6;
     drawNameTag(ctx, a.name, x, tagY, isPlayer);
     if (a.speech) drawNameTag(ctx, a.speech, x, tagY - 20, false);
   }
@@ -910,7 +913,10 @@ function drawScene(dt) {
     const isPlayer = a.kind === 'player';
     const pose = actorPose(a, h, zoneId);
     const scale = isPlayer ? 1 : (a.scale != null ? a.scale : 0.92);
-    const tagY = pose.groundY - drawH * scale * (SPRITE_BASELINE / SPRITE_H) - 6;
+    const anim = isPlayer ? state.player.clock.anim : a.anim;
+    const meta = animMeta(anim);
+    const frame = isPlayer ? state.player.clock.frame : Math.floor((a.clockT || 0) * meta.fps) % meta.n;
+    const tagY = pose.groundY - drawH * scale * (frameBaseline(anim, frame) / SPRITE_H) - 6;
     tagItems.push({
       text: a.name,
       x: pose.x,
@@ -936,6 +942,14 @@ function drawScene(dt) {
     drawNameTag(ctx, t.text, t.x, t.y, !!t.highlight);
   }
   if (window.__mineowV8) {
+    window.__mineowV8.holdIdle = () => {
+      const p = state.player;
+      p.sitting = false;
+      p.targetX = p.x;
+      p.smashUntil = 0;
+      p.clock.set('idle');
+      if (state.presence && state.presence.holdIdle) state.presence.holdIdle();
+    };
     const cover = getCover(w, h);
     window.__mineowV8.debugActors = actors.map((a) => {
       const pose = actorPose(a, h, zoneId);
